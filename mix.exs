@@ -33,6 +33,10 @@ defmodule Collabiq.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:absinthe, "~> 1.4"},
+      {:absinthe_phoenix, "~> 1.4"},
+      {:absinthe_plug, "~> 1.4"},
+      {:dataloader, "~> 1.0"},
       {:phoenix, "~> 1.4.11"},
       {:phoenix_pubsub, "~> 1.1"},
       {:phoenix_ecto, "~> 4.0"},
@@ -42,7 +46,8 @@ defmodule Collabiq.MixProject do
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
-      {:plug_cowboy, "~> 2.0"}
+      {:plug_cowboy, "~> 2.0"},
+      {:timex, "~> 3.6"}
     ]
   end
 

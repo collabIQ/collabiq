@@ -1,4 +1,4 @@
-defmodule Collabiq.Migrations.CreateTenant do
+defmodule Collabiq.Migrations.CreateTenants do
   use Ecto.Migration
 
   def change do

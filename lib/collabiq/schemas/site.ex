@@ -27,7 +27,7 @@ defmodule Collabiq.Site do
   ### Changesets ###
 
   @attrs_status ["active", "deleted", "disabled"]
-  @optional [:deleted_at, :description, :notes, :status]
+  @optional [:deleted_at, :description, :status]
   @required [:name]
 
   @spec cs(%__MODULE__{}, map()) :: {:ok, Ecto.Changeset.t()} | {:error, [any(), ...]}
@@ -43,6 +43,7 @@ defmodule Collabiq.Site do
   ### API Functions ###
   def create(attrs, sess, opts \\ []) do
     with :ok <- Security.validate_perms(:create_site, sess),
+         # Creates a string binary_id
          {:ok, id} <- UUID.string_gen(),
          {:ok, change} <- cs(%__MODULE__{id: id, tenant_id: sess.t_id}, attrs),
          {:ok, struct} <- Repo.put(change, opts),

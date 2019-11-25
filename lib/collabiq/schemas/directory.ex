@@ -4,7 +4,7 @@ defmodule Collabiq.Directory do
   import Ecto.Changeset
   import Ecto.Query, warn: false
   #alias Collabiq.Org.{Location, Site, UserWorkspace}
-  alias Collabiq.{Query, Repo, Response, Security, Site, UUID}
+  alias Collabiq.{Proxy, Query, Repo, Response, Security, Site, UUID}
 
   @schema_name :directory
   @primary_key {:id, :binary_id, autogenerate: false}
@@ -22,6 +22,7 @@ defmodule Collabiq.Directory do
     timestamps(inserted_at: :created_at, type: :utc_datetime)
     field(:deleted_at, :utc_datetime)
 
+    belongs_to(:proxy, Proxy)
     belongs_to(:site, Site)
     #has_many(:locations, Location)
     #has_many(:sites, Site)

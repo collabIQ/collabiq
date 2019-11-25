@@ -1,45 +1,43 @@
-defmodule Collabiq.Site do
+defmodule Collabiq.SystemRole do
   @moduledoc false
   use Ecto.Schema
   import Ecto.Changeset
   import Ecto.Query, warn: false
-  alias Collabiq.{Directory, Query, Repo, Response, Security, UUID}
+  alias Collabiq.{Directory, Query, Repo, Response, Security, SystemPermission, UUID}
 
-  @schema_name :site
+  @schema_name :role
   @primary_key {:id, :binary_id, autogenerate: false}
   @foreign_key_type :binary_id
-  schema "sites" do
+  schema "systems_roles" do
     field(:description, :string)
     field(:name, :string)
-    field(:status, :string, default: "active")
-    #field(:user_count, :integer, default: 0, virtual: true)
-    field(:tenant_id, :binary_id)
-    timestamps(inserted_at: :created_at, type: :utc_datetime)
-    field(:deleted_at, :utc_datetime)
+    # field(:user_count, :integer, default: 0, virtual: true)
 
-    has_many(:directories, Directory)
+    field(:tenant_id, :binary_id)
+
+    timestamps(inserted_at: :created_at, type: :utc_datetime)
+
+    embeds_one(:permissions, SystemPermission, on_replace: :update)
   end
 
   ### Changesets ###
-
-  @attrs_status ["active", "deleted", "disabled"]
-  @optional [:deleted_at, :description, :status]
+  @optional [:description]
   @required [:name]
 
   @spec cs(%__MODULE__{}, map()) :: {:ok, Ecto.Changeset.t()} | {:error, [any(), ...]}
   def cs(%__MODULE__{} = struct, attrs) do
     struct
     |> cast(attrs, @optional ++ @required)
+    |> cast_embed(:permissions, required: true)
     |> validate_required(@required)
-    |> validate_inclusion(:status, @attrs_status)
+    |> unique_constraint(:name, name: :systems_roles_tenant_id_name_index)
     |> foreign_key_constraint(:tenant_id)
     |> Repo.validate_change()
   end
 
   ### API Functions ###
   def create(attrs, sess, opts \\ []) do
-    with :ok <- Security.validate_perms(:create_site, sess),
-         # Creates a string binary_id
+    with :ok <- Security.validate_perms(:create_system_role, sess),
          {:ok, id} <- UUID.string_gen(),
          {:ok, change} <- cs(%__MODULE__{id: id, tenant_id: sess.t_id}, attrs),
          {:ok, struct} <- Repo.put(change, opts),
@@ -68,9 +66,13 @@ defmodule Collabiq.Site do
 
   def get(id, sess, opts \\ []) do
     with {:ok, id} <- UUID.validate_id(id),
+         :ok <-
+           Security.validate_perms(
+             [:create_system_role, :manage_system_role, :purge_system_role],
+             sess
+           ),
          {:ok, struct} <-
            get_query(id, sess, opts)
-           |> Query.site_scope(sess, @schema_name)
            |> Repo.single(opts)
            |> Repo.validate_read(@schema_name) do
       {:ok, struct}
@@ -140,9 +142,13 @@ defmodule Collabiq.Site do
           query
       end
 
-    with {:ok, structs} <-
+    with :ok <-
+           Security.validate_perms(
+             [:create_system_role, :manage_system_role, :purge_system_role],
+             sess
+           ),
+         {:ok, structs} <-
            query
-           |> Query.site_scope(sess, @schema_name)
            |> Query.filter(attrs, @schema_name)
            |> Query.sort(attrs, @schema_name)
            |> Repo.full()
@@ -155,8 +161,8 @@ defmodule Collabiq.Site do
   end
 
   defp modify(attrs, body, sess, opts) do
-    with :ok <- Security.validate_perms(:manage_site, sess),
-         {:ok, struct} <- get(attrs, sess, [id: :binary_id]),
+    with :ok <- Security.validate_perms(:manage_system_role, sess),
+         {:ok, struct} <- get(attrs, sess, id: :binary_id),
          {:ok, change} <- cs(struct, attrs),
          {:ok, struct} <- Repo.put(change, opts),
          {:ok, response} <- Response.return(@schema_name, body, struct) do
@@ -169,8 +175,8 @@ defmodule Collabiq.Site do
 
   def purge(id, sess, opts \\ []) do
     with {:ok, id} <- UUID.validate_id(id),
-         :ok <- Security.validate_perms(:manage_site, sess),
-         {:ok, struct} <- get(id, sess, [id: :binary_id]),
+         :ok <- Security.validate_perms(:purge_system_role, sess),
+         {:ok, struct} <- get(id, sess, id: :binary_id),
          {:ok, change} <- cs(struct, %{}),
          {:ok, struct} <- Repo.purge(change, opts),
          {:ok, response} <- Response.return(@schema_name, :delete, struct) do

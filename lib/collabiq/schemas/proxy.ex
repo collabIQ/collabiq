@@ -1,23 +1,28 @@
-defmodule Collabiq.Site do
-  @moduledoc false
+defmodule Collabiq.Proxy do
+  @moduledoc "Module for defining the schema and changesets for workspace objects."
   use Ecto.Schema
   import Ecto.Changeset
   import Ecto.Query, warn: false
+  #alias Collabiq.Org.{Location, Site, UserWorkspace}
   alias Collabiq.{Directory, Query, Repo, Response, Security, UUID}
 
-  @schema_name :site
+  @schema_name :proxy
   @primary_key {:id, :binary_id, autogenerate: false}
   @foreign_key_type :binary_id
-  schema "sites" do
+  schema "proxies" do
     field(:description, :string)
     field(:name, :string)
     field(:status, :string, default: "active")
     #field(:user_count, :integer, default: 0, virtual: true)
     field(:tenant_id, :binary_id)
+
     timestamps(inserted_at: :created_at, type: :utc_datetime)
     field(:deleted_at, :utc_datetime)
 
     has_many(:directories, Directory)
+    #has_many(:sites, Site)
+    #has_many(:users_workspaces, UserWorkspace, on_replace: :delete)
+    #has_many(:users, through: [:users_workspaces, :user])
   end
 
   ### Changesets ###
@@ -38,7 +43,7 @@ defmodule Collabiq.Site do
 
   ### API Functions ###
   def create(attrs, sess, opts \\ []) do
-    with :ok <- Security.validate_perms(:create_site, sess),
+    with :ok <- Security.validate_perms(:create_proxy, sess),
          # Creates a string binary_id
          {:ok, id} <- UUID.string_gen(),
          {:ok, change} <- cs(%__MODULE__{id: id, tenant_id: sess.t_id}, attrs),
@@ -155,7 +160,7 @@ defmodule Collabiq.Site do
   end
 
   defp modify(attrs, body, sess, opts) do
-    with :ok <- Security.validate_perms(:manage_site, sess),
+    with :ok <- Security.validate_perms(:manage_proxy, sess),
          {:ok, struct} <- get(attrs, sess, [id: :binary_id]),
          {:ok, change} <- cs(struct, attrs),
          {:ok, struct} <- Repo.put(change, opts),
@@ -169,7 +174,7 @@ defmodule Collabiq.Site do
 
   def purge(id, sess, opts \\ []) do
     with {:ok, id} <- UUID.validate_id(id),
-         :ok <- Security.validate_perms(:manage_site, sess),
+         :ok <- Security.validate_perms(:manage_proxy, sess),
          {:ok, struct} <- get(id, sess, [id: :binary_id]),
          {:ok, change} <- cs(struct, %{}),
          {:ok, struct} <- Repo.purge(change, opts),

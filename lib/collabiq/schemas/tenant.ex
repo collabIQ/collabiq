@@ -14,16 +14,6 @@ defmodule Collabiq.Tenant do
     field(:deleted_at, :utc_datetime)
   end
 
-  def create_tenant(attrs) do
-    with {:ok, change} <- cs(%__MODULE__{}, attrs),
-         {:ok, tenant} <- Repo.put(change) do
-      {:ok, tenant}
-    else
-      error ->
-        error
-    end
-  end
-
   ### Changesets ###
 
   @attrs_status ["active", "deleted", "suspended"]
@@ -40,14 +30,24 @@ defmodule Collabiq.Tenant do
   end
 
   ### API Functions ###
-  def delete_tenant(sess) do
-    %{status: "deleted", deleted_at: Timex.now()}
-    |> modify_tenant(:delete, sess)
+  def create_tenant(attrs, opts \\ []) do
+    with {:ok, change} <- cs(%__MODULE__{}, attrs),
+         {:ok, tenant} <- Repo.put(change, opts) do
+      {:ok, tenant}
+    else
+      error ->
+        error
+    end
   end
 
-  def enable_tenant(sess) do
+  def delete_tenant(sess, opts \\ []) do
+    %{status: "deleted", deleted_at: Timex.now()}
+    |> modify_tenant(:delete, sess, opts)
+  end
+
+  def enable_tenant(sess, opts \\ []) do
     %{status: "active", deleted_at: nil}
-    |> modify_tenant(:enable, sess)
+    |> modify_tenant(:enable, sess, opts)
   end
 
   def get_tenant(sess, opts \\ []) do
@@ -65,11 +65,11 @@ defmodule Collabiq.Tenant do
     end
   end
 
-  def modify_tenant(attrs, body, sess) do
+  def modify_tenant(attrs, body, sess, opts) do
     with :ok <- Security.validate_perms(:manage_tenant, sess),
-         {:ok, tenant} <- get_tenant(sess),
+         {:ok, tenant} <- get_tenant(sess, [id: :binary_id]),
          {:ok, change} <- cs(tenant, attrs),
-         {:ok, tenant} <- Repo.put(change),
+         {:ok, tenant} <- Repo.put(change, opts),
          {:ok, response} <- Response.return(:tenant, body, tenant) do
       {:ok, %{tenant: tenant, response: response}}
     else
@@ -78,13 +78,20 @@ defmodule Collabiq.Tenant do
     end
   end
 
-  def purge_tenant(%{t_id: id} = sess, opts) do
-    with {:ok, id} <- UUID.validate_id(id),
-         :ok <- Security.validate_perms(:manage_tenant, sess),
-         {:ok, tenant} <- get_tenant(sess, opts)
+  def purge_tenant(sess, opts \\ []) do
+    with :ok <- Security.validate_perms(:manage_tenant, sess),
+         {:ok, tenant} <- get_tenant(sess, opts),
+         {:ok, change} <- cs(tenant, %{}),
+         {:ok, tenant} <- Repo.purge(change, opts),
+         {:ok, response} <- Response.return(:tenant, :delete, tenant) do
+       {:ok, %{tenant: tenant, response: response}}
+    else
+      error ->
+        error
+    end
   end
 
-  def update_tenant(attrs, sess) do
-    modify_tenant(attrs, :update, sess)
+  def update_tenant(attrs, sess, opts \\ []) do
+    modify_tenant(attrs, :update, sess, opts)
   end
 end

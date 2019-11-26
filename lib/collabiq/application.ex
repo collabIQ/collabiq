@@ -11,7 +11,8 @@ defmodule Collabiq.Application do
       # Start the Ecto repository
       Collabiq.Repo,
       # Start the endpoint when the application starts
-      CollabiqWeb.Endpoint
+      CollabiqWeb.Endpoint,
+      {Absinthe.Subscription, [CollabiqWeb.Endpoint]}
       # Starts a worker by calling: Collabiq.Worker.start_link(arg)
       # {Collabiq.Worker, arg},
     ]

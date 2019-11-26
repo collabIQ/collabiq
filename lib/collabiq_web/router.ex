@@ -13,6 +13,13 @@ defmodule CollabiqWeb.Router do
     plug :accepts, ["json"]
   end
 
+  scope "/graphiql" do
+    pipe_through([:api])
+    forward("/", Absinthe.Plug.GraphiQL, schema: CollabiqWeb.Schema, socket: CollabiqWeb.UserSocket)
+  end
+
+  forward("/graphql", Absinthe.Plug, schema: CollabiqWeb.Schema)
+
   scope "/", CollabiqWeb do
     pipe_through :browser
 

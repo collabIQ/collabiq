@@ -1,4 +1,5 @@
 defmodule CollabiqWeb.Endpoint do
+  use Absinthe.Phoenix.Endpoint
   use Phoenix.Endpoint, otp_app: :collabiq
 
   socket "/socket", CollabiqWeb.UserSocket,

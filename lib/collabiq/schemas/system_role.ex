@@ -11,17 +11,50 @@ defmodule Collabiq.SystemRole do
   schema "systems_roles" do
     field(:description, :string)
     field(:name, :string)
-    # field(:user_count, :integer, default: 0, virtual: true)
+    field(:create_directory, :boolean, default: false)
+    field(:manage_directory, :boolean, default: false)
+    field(:purge_directory, :boolean, default: false)
+    field(:create_proxy, :boolean, default: false)
+    field(:manage_proxy, :boolean, default: false)
+    field(:purge_proxy, :boolean, default: false)
+    field(:create_site, :boolean, default: false)
+    field(:manage_site, :boolean, default: false)
+    field(:purge_site, :boolean, default: false)
+    field(:create_site_role, :boolean, default: false)
+    field(:manage_site_role, :boolean, default: false)
+    field(:purge_site_role, :boolean, default: false)
+    field(:create_system_role, :boolean, default: false)
+    field(:manage_system_role, :boolean, default: false)
+    field(:purge_system_role, :boolean, default: false)
+    field(:manage_tenant, :boolean, default: false)
+    field(:purge_tenant, :boolean, default: false)
 
     field(:tenant_id, :binary_id)
 
     timestamps(inserted_at: :created_at, type: :utc_datetime)
-
-    embeds_one(:permissions, SystemPermission, on_replace: :update)
   end
 
   ### Changesets ###
-  @optional [:description]
+  @optional [
+    :description,
+    :create_directory,
+    :manage_directory,
+    :purge_directory,
+    :create_proxy,
+    :manage_proxy,
+    :purge_proxy,
+    :create_site,
+    :manage_site,
+    :purge_site,
+    :create_site_role,
+    :manage_site_role,
+    :purge_site_role,
+    :create_system_role,
+    :manage_system_role,
+    :purge_system_role,
+    :manage_tenant,
+    :purge_tenant
+  ]
   @required [:name]
 
   @spec cs(%__MODULE__{}, map()) :: {:ok, Ecto.Changeset.t()} | {:error, [any(), ...]}

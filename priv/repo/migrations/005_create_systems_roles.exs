@@ -6,7 +6,23 @@ defmodule Collabiq.Migrations.CreateSystemsRoles do
       add :id, :binary_id, primary_key: true
       add :name, :citext, null: false
       add :description, :string
-      add :perms, :map, null: false
+      add :create_directory, :boolean
+      add :manage_directory, :boolean
+      add :purge_directory, :boolean
+      add :create_proxy, :boolean
+      add :manage_proxy, :boolean
+      add :purge_proxy, :boolean
+      add :create_site, :boolean
+      add :manage_site, :boolean
+      add :purge_site, :boolean
+      add :create_site_role, :boolean
+      add :manage_site_role, :boolean
+      add :purge_site_role, :boolean
+      add :create_system_role, :boolean
+      add :manage_system_role, :boolean
+      add :purge_system_role, :boolean
+      add :manage_tenant, :boolean
+      add :purge_tenant, :boolean
 
       add :tenant_id, references(:tenants, on_delete: :delete_all, type: :binary_id), null: false
 

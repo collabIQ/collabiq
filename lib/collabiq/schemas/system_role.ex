@@ -3,7 +3,7 @@ defmodule Collabiq.SystemRole do
   use Ecto.Schema
   import Ecto.Changeset
   import Ecto.Query, warn: false
-  alias Collabiq.{Directory, Query, Repo, Response, Security, SystemPermission, UUID}
+  alias Collabiq.{Directory, Query, Repo, Response, Security, UUID}
 
   @schema_name :role
   @primary_key {:id, :binary_id, autogenerate: false}
@@ -70,7 +70,7 @@ defmodule Collabiq.SystemRole do
 
   ### API Functions ###
   def create(attrs, sess, opts \\ []) do
-    with :ok <- Security.validate_perms(:create_system_role, sess),
+    with :ok <- Security.validate_systems_perms(:create_system_role, sess),
          {:ok, id} <- UUID.string_gen(),
          {:ok, change} <- cs(%__MODULE__{id: id, tenant_id: sess.t_id}, attrs),
          {:ok, struct} <- Repo.put(change, opts),
@@ -100,7 +100,7 @@ defmodule Collabiq.SystemRole do
   def get(id, sess, opts \\ []) do
     with {:ok, id} <- UUID.validate_id(id),
          :ok <-
-           Security.validate_perms(
+           Security.validate_systems_perms(
              [:create_system_role, :manage_system_role, :purge_system_role],
              sess
            ),
@@ -176,7 +176,7 @@ defmodule Collabiq.SystemRole do
       end
 
     with :ok <-
-           Security.validate_perms(
+           Security.validate_systems_perms(
              [:create_system_role, :manage_system_role, :purge_system_role],
              sess
            ),
@@ -194,7 +194,7 @@ defmodule Collabiq.SystemRole do
   end
 
   defp modify(attrs, body, sess, opts) do
-    with :ok <- Security.validate_perms(:manage_system_role, sess),
+    with :ok <- Security.validate_systems_perms(:manage_system_role, sess),
          {:ok, struct} <- get(attrs, sess, id: :binary_id),
          {:ok, change} <- cs(struct, attrs),
          {:ok, struct} <- Repo.put(change, opts),
@@ -208,7 +208,7 @@ defmodule Collabiq.SystemRole do
 
   def purge(id, sess, opts \\ []) do
     with {:ok, id} <- UUID.validate_id(id),
-         :ok <- Security.validate_perms(:purge_system_role, sess),
+         :ok <- Security.validate_systems_perms(:purge_system_role, sess),
          {:ok, struct} <- get(id, sess, id: :binary_id),
          {:ok, change} <- cs(struct, %{}),
          {:ok, struct} <- Repo.purge(change, opts),

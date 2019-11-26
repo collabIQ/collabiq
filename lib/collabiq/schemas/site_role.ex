@@ -3,25 +3,33 @@ defmodule Collabiq.SiteRole do
   use Ecto.Schema
   import Ecto.Changeset
   import Ecto.Query, warn: false
-  alias Collabiq.{Directory, Query, Repo, Response, Security, Site, SitePermission, UUID}
+  alias Collabiq.{Directory, Query, Repo, Response, Security, Site, UUID}
 
   @schema_name :role
   @primary_key {:id, :binary_id, autogenerate: false}
   @foreign_key_type :binary_id
-  schema "systems_roles" do
+  schema "sites_roles" do
     field(:description, :string)
     field(:name, :string)
-    # field(:user_count, :integer, default: 0, virtual: true)
+    field(:create_group, :boolean, default: false)
+    field(:manage_group, :boolean, default: false)
+    field(:purge_group, :boolean, default: false)
+    field(:create_ou, :boolean, default: false)
+    field(:manage_ou, :boolean, default: false)
+    field(:purge_ou, :boolean, default: false)
+    field(:create_user, :boolean, default: false)
+    field(:manage_user, :boolean, default: false)
+    field(:purge_user, :boolean, default: false)
+
     field(:tenant_id, :binary_id)
 
     timestamps(inserted_at: :created_at, type: :utc_datetime)
 
     belongs_to(:site, Site)
-    embeds_one(:permissions, SystemPermission, on_replace: :update)
   end
 
   ### Changesets ###
-  @optional [:description]
+  @optional [:description, :create_group, :manage_group, :purge_group, :create_ou, :manage_ou, :purge_ou, :create_uer, :manage_user, :purge_user]
   @required [:name]
 
   @spec cs(%__MODULE__{}, map()) :: {:ok, Ecto.Changeset.t()} | {:error, [any(), ...]}
@@ -30,14 +38,14 @@ defmodule Collabiq.SiteRole do
     |> cast(attrs, @optional ++ @required)
     |> cast_embed(:permissions, required: true)
     |> validate_required(@required)
-    |> unique_constraint(:name, name: :systems_roles_tenant_id_name_index)
+    |> unique_constraint(:name, name: :sites_roles_site_id_name_index)
     |> foreign_key_constraint(:tenant_id)
     |> Repo.validate_change()
   end
 
   ### API Functions ###
   def create(attrs, sess, opts \\ []) do
-    with :ok <- Security.validate_perms(:create_system_role, sess),
+    with :ok <- Security.validate_systems_perms(:create_site_role, sess),
          {:ok, id} <- UUID.string_gen(),
          {:ok, change} <- cs(%__MODULE__{id: id, tenant_id: sess.t_id}, attrs),
          {:ok, struct} <- Repo.put(change, opts),
@@ -67,8 +75,8 @@ defmodule Collabiq.SiteRole do
   def get(id, sess, opts \\ []) do
     with {:ok, id} <- UUID.validate_id(id),
          :ok <-
-           Security.validate_perms(
-             [:create_system_role, :manage_system_role, :purge_system_role],
+           Security.validate_systems_perms(
+             [:create_site_role, :manage_site_role, :purge_site_role],
              sess
            ),
          {:ok, struct} <-
@@ -143,8 +151,8 @@ defmodule Collabiq.SiteRole do
       end
 
     with :ok <-
-           Security.validate_perms(
-             [:create_system_role, :manage_system_role, :purge_system_role],
+           Security.validate_systems_perms(
+             [:create_site_role, :manage_site_role, :purge_site_role],
              sess
            ),
          {:ok, structs} <-
@@ -161,7 +169,7 @@ defmodule Collabiq.SiteRole do
   end
 
   defp modify(attrs, body, sess, opts) do
-    with :ok <- Security.validate_perms(:manage_system_role, sess),
+    with :ok <- Security.validate_systems_perms(:manage_site_role, sess),
          {:ok, struct} <- get(attrs, sess, id: :binary_id),
          {:ok, change} <- cs(struct, attrs),
          {:ok, struct} <- Repo.put(change, opts),
@@ -175,7 +183,7 @@ defmodule Collabiq.SiteRole do
 
   def purge(id, sess, opts \\ []) do
     with {:ok, id} <- UUID.validate_id(id),
-         :ok <- Security.validate_perms(:purge_system_role, sess),
+         :ok <- Security.validate_systems_perms(:purge_site_role, sess),
          {:ok, struct} <- get(id, sess, id: :binary_id),
          {:ok, change} <- cs(struct, %{}),
          {:ok, struct} <- Repo.purge(change, opts),

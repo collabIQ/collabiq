@@ -49,7 +49,7 @@ defmodule Collabiq.Directory do
 
   ### API Functions ###
   def create(attrs, sess, opts \\ []) do
-    with :ok <- Security.validate_perms(:create_directory, sess),
+    with :ok <- Security.validate_systems_perms(:create_directory, sess),
          {:ok, id} <- UUID.string_gen(),
          {:ok, change} <- cs(%__MODULE__{id: id, tenant_id: sess.t_id}, attrs),
          {:ok, struct} <- Repo.put(change, opts),
@@ -78,6 +78,7 @@ defmodule Collabiq.Directory do
 
   def get(id, sess, opts \\ []) do
     with {:ok, id} <- UUID.validate_id(id),
+         :ok <- Security.validate_systems_perms([:create_directory, :manage_directory, :purge_directory], sess),
          {:ok, struct} <-
            get_query(id, sess, opts)
            |> Query.site_scope(sess, @schema_name)
@@ -150,7 +151,8 @@ defmodule Collabiq.Directory do
           query
       end
 
-    with {:ok, structs} <-
+    with :ok <- Security.validate_systems_perms([:create_directory, :manage_directory, :purge_directory], sess),
+         {:ok, structs} <-
            query
            |> Query.site_scope(sess, @schema_name)
            |> Query.filter(attrs, @schema_name)
@@ -165,7 +167,7 @@ defmodule Collabiq.Directory do
   end
 
   defp modify(attrs, body, sess, opts) do
-    with :ok <- Security.validate_perms(:manage_directory, sess),
+    with :ok <- Security.validate_systems_perms(:manage_directory, sess),
          {:ok, struct} <- get(attrs, sess, [id: :binary_id]),
          {:ok, change} <- cs(struct, attrs),
          {:ok, struct} <- Repo.put(change, opts),
@@ -179,7 +181,7 @@ defmodule Collabiq.Directory do
 
   def purge(id, sess, opts \\ []) do
     with {:ok, id} <- UUID.validate_id(id),
-         :ok <- Security.validate_perms(:manage_directory, sess),
+         :ok <- Security.validate_systems_perms(:purge_directory, sess),
          {:ok, struct} <- get(id, sess, [id: :binary_id]),
          {:ok, change} <- cs(struct, %{}),
          {:ok, struct} <- Repo.purge(change, opts),

@@ -51,7 +51,7 @@ defmodule Collabiq.Tenant do
   end
 
   def get_tenant(sess, opts \\ []) do
-    with :ok <- Security.validate_perms(:manage_tenant, sess),
+    with :ok <- Security.validate_systems_perms([:manage_tenant, :purge_tenant], sess),
          {:ok, tenant} <-
            from(t in __MODULE__,
              where: t.id == ^sess.t_id
@@ -66,7 +66,7 @@ defmodule Collabiq.Tenant do
   end
 
   def modify_tenant(attrs, body, sess, opts) do
-    with :ok <- Security.validate_perms(:manage_tenant, sess),
+    with :ok <- Security.validate_systems_perms(:manage_tenant, sess),
          {:ok, tenant} <- get_tenant(sess, [id: :binary_id]),
          {:ok, change} <- cs(tenant, attrs),
          {:ok, tenant} <- Repo.put(change, opts),
@@ -79,7 +79,7 @@ defmodule Collabiq.Tenant do
   end
 
   def purge_tenant(sess, opts \\ []) do
-    with :ok <- Security.validate_perms(:purge_tenant, sess),
+    with :ok <- Security.validate_systems_perms(:purge_tenant, sess),
          {:ok, tenant} <- get_tenant(sess, opts),
          {:ok, change} <- cs(tenant, %{}),
          {:ok, tenant} <- Repo.purge(change, opts),

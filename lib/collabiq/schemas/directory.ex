@@ -1,13 +1,12 @@
 defmodule Collabiq.Directory do
-  @moduledoc "Module for defining the schema and changesets for workspace objects."
+  @moduledoc false
   use Ecto.Schema
   import Ecto.Changeset
   import Ecto.Query, warn: false
-  #alias Collabiq.Org.{Location, Site, UserWorkspace}
-  alias Collabiq.{Proxy, Query, Repo, Response, Security, Site, UUID}
+  alias Collabiq.{Proxy, Query, Repo, Security, Site}
 
   @schema_name :directory
-  @primary_key {:id, :binary_id, autogenerate: false}
+  @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "directories" do
     field(:description, :string)
@@ -15,7 +14,6 @@ defmodule Collabiq.Directory do
     field(:pw, :string)
     field(:server, :string)
     field(:status, :string, default: "active")
-    #field(:user_count, :integer, default: 0, virtual: true)
     field(:tenant_id, :binary_id)
     field(:un, :string)
 
@@ -24,19 +22,18 @@ defmodule Collabiq.Directory do
 
     belongs_to(:proxy, Proxy)
     belongs_to(:site, Site)
-    #has_many(:locations, Location)
-    #has_many(:sites, Site)
-    #has_many(:users_workspaces, UserWorkspace, on_replace: :delete)
-    #has_many(:users, through: [:users_workspaces, :user])
+    # has_many(:locations, Location)
+    # has_many(:sites, Site)
+    # has_many(:users_workspaces, UserWorkspace, on_replace: :delete)
+    # has_many(:users, through: [:users_workspaces, :user])
   end
 
   ### Changesets ###
 
   @attrs_status ["active", "deleted", "disabled"]
   @optional [:deleted_at, :description, :pw, :status, :un]
-  @required [:name, :server]
+  @required [:name, :site_id, :server]
 
-  @spec cs(%__MODULE__{}, map()) :: {:ok, Ecto.Changeset.t()} | {:error, [any(), ...]}
   def cs(%__MODULE__{} = struct, attrs) do
     struct
     |> cast(attrs, @optional ++ @required)
@@ -44,45 +41,51 @@ defmodule Collabiq.Directory do
     |> validate_inclusion(:status, @attrs_status)
     |> foreign_key_constraint(:site_id)
     |> foreign_key_constraint(:tenant_id)
-    |> Repo.validate_change()
   end
 
   ### API Functions ###
-  def create(attrs, sess, opts \\ []) do
-    with :ok <- Security.validate_systems_perms(:create_directory, sess),
-         {:ok, id} <- UUID.string_gen(),
-         {:ok, change} <- cs(%__MODULE__{id: id, tenant_id: sess.t_id}, attrs),
-         {:ok, struct} <- Repo.put(change, opts),
-         {:ok, response} <- Response.return(@schema_name, :create, struct) do
-      {:ok, %{@schema_name => struct, :response => response}}
+  def create(attrs, sess) do
+    site_id = Map.get(attrs, "site_id") || Map.get(attrs, :site_id)
+    attrs = Map.drop(attrs, ["deleted_at", :deleted_at, "status", :status])
+
+    with :ok <- Security.validate_perms(%{admin: [:create_directory]}, sess),
+         change <- cs(%__MODULE__{tenant_id: sess.t_id}, attrs),
+         :ok <- Repo.validate_change(change),
+         {:ok, _site} <- Collabiq.get_site(site_id, sess),
+         {:ok, struct} <- Repo.put(change) do
+       {:ok, struct}
     else
       error ->
         error
     end
   end
 
-  def delete(id, sess, opts \\ []) do
+  def delete(id, sess) do
     %{status: "deleted", deleted_at: Timex.now(), id: id}
-    |> modify(:delete, sess, opts)
+    |> modify(sess)
   end
 
-  def disable(id, sess, opts \\ []) do
+  def disable(id, sess) do
     %{status: "disabled", deleted_at: nil, id: id}
-    |> modify(:disable, sess, opts)
+    |> modify(sess)
   end
 
-  def enable(id, sess, opts \\ []) do
+  def enable(id, sess) do
     %{status: "active", deleted_at: nil, id: id}
-    |> modify(:enable, sess, opts)
+    |> modify(sess)
   end
 
-  def get(id, sess, opts \\ []) do
-    with {:ok, id} <- UUID.validate_id(id),
-         :ok <- Security.validate_systems_perms([:create_directory, :manage_directory, :purge_directory], sess),
+  def get(id, sess) do
+    with :ok <-
+           Security.validate_perms(
+             %{admin: [:create_directory, :manage_directory, :purge_directory]},
+             sess
+           ),
          {:ok, struct} <-
-           get_query(id, sess, opts)
-           |> Query.site_scope(sess, @schema_name)
-           |> Repo.single(opts)
+           __MODULE__
+           |> where([q], q.id == ^id)
+           |> where([q], q.tenant_id == ^sess.t_id)
+           |> Repo.one()
            |> Repo.validate_read(@schema_name) do
       {:ok, struct}
     else
@@ -91,73 +94,18 @@ defmodule Collabiq.Directory do
     end
   end
 
-  def get_query(id, sess, opts) do
-    query =
-      __MODULE__
-      |> where([q], q.tenant_id == ^sess.t_id)
-      |> where([q], q.id == ^id)
-
-    Keyword.get(opts, :fields, [])
-    |> Enum.any?(fn x -> x == "userCount" end)
-    |> case do
-      true ->
-        query
-        |> join(:left, [q], u in assoc(q, :users), as: :user_count)
-        |> group_by([q], [
-          q.id,
-          q.description,
-          q.name,
-          q.notes,
-          q.status,
-          q.tenant_id,
-          q.created_at,
-          q.updated_at,
-          q.deleted_at
-        ])
-        |> select_merge([q, u], %{user_count: count(u.id)})
-
-      _ ->
-        query
-    end
-  end
-
-  def list(attrs, sess, opts \\ []) do
-    query =
-      __MODULE__
-      |> where([q], q.tenant_id == ^sess.t_id)
-
-    user_count =
-      Keyword.get(opts, :fields, [])
-      |> Enum.any?(fn x -> x == "userCount" end)
-
-    query =
-      case user_count do
-        true ->
-          query
-          |> join(:left, [q], u in assoc(q, :users), as: :user_count)
-          |> group_by([q], [
-            q.id,
-            q.description,
-            q.name,
-            q.notes,
-            q.status,
-            q.created_at,
-            q.updated_at,
-            q.deleted_at
-          ])
-          |> select_merge([q, u], %{user_count: count(u.id)})
-
-        _ ->
-          query
-      end
-
-    with :ok <- Security.validate_systems_perms([:create_directory, :manage_directory, :purge_directory], sess),
+  def list(attrs, sess) do
+    with :ok <-
+           Security.validate_perms(
+             %{admin: [:create_directory, :manage_directory, :purge_directory]},
+             sess
+           ),
          {:ok, structs} <-
-           query
-           |> Query.site_scope(sess, @schema_name)
+           __MODULE__
+           |> where([q], q.tenant_id == ^sess.t_id)
            |> Query.filter(attrs, @schema_name)
            |> Query.sort(attrs, @schema_name)
-           |> Repo.full()
+           |> Repo.all()
            |> Repo.validate_read(@schema_name) do
       {:ok, structs}
     else
@@ -166,34 +114,48 @@ defmodule Collabiq.Directory do
     end
   end
 
-  defp modify(attrs, body, sess, opts) do
-    with :ok <- Security.validate_systems_perms(:manage_directory, sess),
-         {:ok, struct} <- get(attrs, sess, [id: :binary_id]),
-         {:ok, change} <- cs(struct, attrs),
-         {:ok, struct} <- Repo.put(change, opts),
-         {:ok, response} <- Response.return(@schema_name, body, struct) do
-      {:ok, %{@schema_name => struct, :response => response}}
+  defp modify(attrs, sess) do
+    id = Map.get(attrs, "id") || Map.get(attrs, :id)
+
+    with :ok <- Security.validate_perms(%{admin: [:manage_directory]}, sess),
+         {:ok, struct} <- get(id, sess),
+         change <- cs(struct, attrs),
+         change <- change_site(change, sess),
+         :ok <- Repo.validate_change(change),
+         {:ok, struct} <- Repo.put(change) do
+      {:ok, struct}
     else
       error ->
         error
     end
   end
 
-  def purge(id, sess, opts \\ []) do
-    with {:ok, id} <- UUID.validate_id(id),
-         :ok <- Security.validate_systems_perms(:purge_directory, sess),
-         {:ok, struct} <- get(id, sess, [id: :binary_id]),
-         {:ok, change} <- cs(struct, %{}),
-         {:ok, struct} <- Repo.purge(change, opts),
-         {:ok, response} <- Response.return(@schema_name, :delete, struct) do
-      {:ok, %{@schema_name => struct, :response => response}}
+  def purge(id, sess) do
+    with :ok <- Security.validate_perms(%{admin: [:purge_directory]}, sess),
+         {:ok, struct} <- get(id, sess),
+         change <- cs(struct, %{}),
+         :ok <- Repo.validate_change(change),
+         {:ok, struct} <- Repo.purge(change) do
+      {:ok, struct}
     else
       error ->
         error
     end
   end
 
-  def update(attrs, sess, opts \\ []) do
-    modify(attrs, :update, sess, opts)
+  def update(attrs, sess) do
+    Map.drop(attrs, ["deleted_at", :deleted_at, "status", :status])
+    |> modify(sess)
   end
+
+  defp change_site(%{params: %{"site_id" => site_id}} = change, sess) do
+    with {:ok, _site} <- Collabiq.get_site(site_id, sess) do
+      change
+    else
+      error ->
+        error
+    end
+  end
+
+  defp change_site(change, _sess), do: change
 end

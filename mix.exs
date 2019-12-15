@@ -36,7 +36,10 @@ defmodule Collabiq.MixProject do
       {:absinthe, "~> 1.4"},
       {:absinthe_phoenix, "~> 1.4"},
       {:absinthe_plug, "~> 1.4"},
+      {:absinthe_relay, "~> 1.4"},
+      {:bcrypt_elixir, "~> 2.0"},
       {:dataloader, "~> 1.0"},
+      {:myxql, "~> 0.3.0"},
       {:phoenix, "~> 1.4.11"},
       {:phoenix_pubsub, "~> 1.1"},
       {:phoenix_ecto, "~> 4.0"},
@@ -59,9 +62,9 @@ defmodule Collabiq.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-      "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate", "test"]
+      "ecto.setup": ["ecto.create --quiet -r Collabiq.PgRepo", "ecto.migrate -r Collabiq.PgRepo", "run -e Collabiq.Seed.start()"],
+      "ecto.reset": ["ecto.drop -r Collabiq.PgRepo", "ecto.setup"],
+      test: ["ecto.reset", "test"]
     ]
   end
 end

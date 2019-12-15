@@ -71,6 +71,10 @@ defmodule Collabiq.Query do
 
   def filter(query, _args, _schema), do: query
 
+  def site_scope(query, _, _) do
+    query
+  end
+
   def site_scope(query, %{scopes: scopes, sites: sites}, schema) do
     sites = UUID.base_to_string(sites)
 
@@ -100,7 +104,6 @@ defmodule Collabiq.Query do
   end
 
   def sort(query, %{sort: %{field: field, order: order}}, schema) when order in ["asc", "desc", :asc, :desc] do
-    IO.puts(order)
     case field do
       :created_at when schema in [:article, :department, :location, :site, :team, :workspace] ->
         query
@@ -119,11 +122,11 @@ defmodule Collabiq.Query do
             )
         end
 
-      :name when schema in [:article, :department, :location, :role, :site, :team, :workspace] ->
+      :name when schema in [:directory, :site] ->
         query
         |> order_by([q], {^order, q.name})
 
-      :status when schema in [:department, :location, :role, :site, :team, :workspace] ->
+      :status when schema in [:directory, :site] ->
         query
         |> order_by([q], {^order, q.status})
 
@@ -142,7 +145,7 @@ defmodule Collabiq.Query do
             )
         end
 
-      :updated_at when schema in [:article, :department, :location, :site, :team, :workspace] ->
+      :updated_at when schema in [:directory, :site] ->
         query
         |> order_by([q], {^order, q.updated_at})
 
@@ -164,11 +167,9 @@ defmodule Collabiq.Query do
     )
   end
 
-  def sort(query, _args, schema) when schema in [:department, :group, :role, :team, :user, :workspace] do
-    from(q in query,
-      #order_by: fragment("lower(name) ASC")
-      order_by: [asc: :name]
-    )
+  def sort(query, _args, schema) when schema in [:directory, :site] do
+    query
+    |> order_by(asc: :name)
   end
 
   def sort(query, _args, _schema), do: query

@@ -1,8 +1,8 @@
-defmodule Collabiq.Migrations.CreateSitesRoles do
+defmodule Collabiq.Migrations.CreateWorkRoles do
   use Ecto.Migration
 
   def change do
-    create table(:sites_roles, primary_key: false) do
+    create table(:work_roles, primary_key: false) do
       add :id, :binary_id, primary_key: true
       add :name, :citext, null: false
       add :description, :string

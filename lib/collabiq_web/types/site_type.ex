@@ -1,19 +1,20 @@
 defmodule CollabiqWeb.SiteType do
   use Absinthe.Schema.Notation
+  use Absinthe.Relay.Schema.Notation, :modern
   #import Absinthe.Resolution.Helpers
   alias CollabiqWeb.Resolver
 
   object :site_query do
     field :site, :site do
       arg(:id, non_null(:id))
-      #middleware(CollabiqWeb.Middleware.Auth)
+      middleware(CollabiqWeb.AuthMiddleware)
       resolve(&Resolver.get_site/3)
     end
 
     field :sites, list_of(:site) do
       arg(:filter, :filter_input)
       arg(:sort, :sort_input)
-      #middleware(CollabiqWeb.Middleware.Auth)
+      middleware(CollabiqWeb.AuthMiddleware)
       resolve(&Resolver.list_sites/3)
     end
   end

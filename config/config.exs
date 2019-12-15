@@ -8,7 +8,7 @@
 use Mix.Config
 
 config :collabiq,
-  ecto_repos: [Collabiq.Repo],
+  ecto_repos: [Collabiq.MyRepo, Collabiq.PgRepo],
   generators: [binary_id: true]
 
 # Configures the endpoint
@@ -25,6 +25,9 @@ config :logger, :console,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# config Absinthe.Relay, CollabiqWeb.Schema,
+#   global_id_translator: CollabiqWeb.IDTranslator
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

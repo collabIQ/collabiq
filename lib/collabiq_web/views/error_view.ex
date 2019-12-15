@@ -1,6 +1,8 @@
 defmodule CollabiqWeb.ErrorView do
   use CollabiqWeb, :view
 
+  alias Collabiq.Error
+
   # If you want to customize a particular status code
   # for a certain format, you may uncomment below.
   # def render("500.html", _assigns) do
@@ -12,5 +14,10 @@ defmodule CollabiqWeb.ErrorView do
   # "Not Found".
   def template_not_found(template, _assigns) do
     Phoenix.Controller.status_message_from_template(template)
+  end
+
+  def render("401.json", _assigns) do
+    {:error, error} = Error.message(:login, :invalid, :login)
+    %{errors: error}
   end
 end

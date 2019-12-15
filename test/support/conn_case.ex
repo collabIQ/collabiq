@@ -29,7 +29,11 @@ defmodule CollabiqWeb.ConnCase do
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Collabiq.Repo)
+    :ok = if Application.get_env(:collabiq, Collabiq.Repo)[:type] == "mysql" do
+      Ecto.Adapters.SQL.Sandbox.checkout(Collabiq.MyRepo)
+    else
+      Ecto.Adapters.SQL.Sandbox.checkout(Collabiq.PgRepo)
+    end
 
     unless tags[:async] do
       Ecto.Adapters.SQL.Sandbox.mode(Collabiq.Repo, {:shared, self()})

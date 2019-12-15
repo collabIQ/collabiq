@@ -38,7 +38,7 @@ defmodule Collabiq.Error do
   end
 
   def message(key \\ :oops, body, code \\ :error) do
-    {:error, [%{message: Atom.to_string(key) <> " " <> body(body), code: Atom.to_string(code)}]}
+    {:error, [%{message: to_string(key) <> " " <> body(body), code: to_string(code)}]}
   end
 
   def message() do

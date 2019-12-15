@@ -1,6 +1,8 @@
 defmodule CollabiqWeb.Resolver do
-  alias CollabiqWeb.{DirectoryResolver, ProxyResolver, SiteResolver}
+  alias CollabiqWeb.{AuthResolver, DirectoryResolver, ProxyResolver, SiteResolver}
 
+  ### Auth Functions ###
+  defdelegate login(attrs, sess), to: AuthResolver
   ### Directory Functions ###
   defdelegate create_directory(parent, attrs, sess), to: DirectoryResolver, as: :create
   defdelegate delete_directory(parent, id, sess), to: DirectoryResolver, as: :delete

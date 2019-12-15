@@ -1,8 +1,7 @@
 defmodule CollabiqWeb.Schema do
   use Absinthe.Schema
-  import Absinthe.Resolution.Helpers
-  alias Collabiq.{Data, Directory, Site}
-  alias CollabiqWeb.{Resolver}
+  use Absinthe.Relay.Schema, :modern
+  alias Collabiq.{Data}
 
   def context(context) do
     default_params = Map.take(context, [:session])
@@ -27,17 +26,31 @@ defmodule CollabiqWeb.Schema do
   end
 
   import_types(Absinthe.Type.Custom)
+  import_types(CollabiqWeb.AuthType)
   import_types(CollabiqWeb.DirectoryType)
   import_types(CollabiqWeb.ProxyType)
   import_types(CollabiqWeb.SiteType)
 
+  node interface do
+    resolve_type fn
+      _, _ ->
+        nil
+    end
+  end
   query do
+    node field do
+      resolve fn
+        %{id: id}, _ ->
+          {:ok, id}
+      end
+    end
     import_fields(:directory_query)
     import_fields(:proxy_query)
     import_fields(:site_query)
   end
 
   mutation do
+    import_fields(:auth_mutation)
     import_fields(:directory_mutation)
     import_fields(:proxy_query)
     import_fields(:site_mutation)

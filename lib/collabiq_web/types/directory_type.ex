@@ -67,6 +67,7 @@ defmodule CollabiqWeb.DirectoryType do
     field(:pw, :string)
     field(:name, :string)
     field(:server, :string)
+    field(:site_id, :id)
     field(:status, :string)
     field(:un, :string)
     field(:updated_at, :datetime)
@@ -99,6 +100,7 @@ defmodule CollabiqWeb.DirectoryType do
     field(:name, :string)
     field(:pw, :string)
     field(:server, :string)
+    field(:site_id, :id)
     field(:un, :string)
   end
 
